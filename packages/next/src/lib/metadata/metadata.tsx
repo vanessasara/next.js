@@ -131,7 +131,7 @@ export function createMetadataComponents({
   }
   Viewport.displayName = VIEWPORT_BOUNDARY_NAME
 
-  async function metadata() {
+  async function Mimetadata() {
     return getResolvedMetadata(
       tree,
       searchParams,
@@ -144,7 +144,8 @@ export function createMetadataComponents({
   }
 
   async function Metadata() {
-    return await metadata()
+    return <Mimetadata />
+    // return await metadata()
   //   try {
   //     return await metadata()
   //   } catch (error) {
@@ -170,7 +171,8 @@ export function createMetadataComponents({
   Metadata.displayName = METADATA_BOUNDARY_NAME
 
   async function getMetadataReady(): Promise<void> {
-    await metadata()
+    // await 
+    Mimetadata()
     return undefined
   }
 
@@ -262,7 +264,9 @@ async function getResolvedMetadataImpl(
     errorType
   )
   return (
-    <MetadataClientReceiver promise={metadataPromise} />
+    // <Suspense fallback={null}>
+      <MetadataClientReceiver promise={metadataPromise} />
+    // </Suspense>
   )
 }
 
