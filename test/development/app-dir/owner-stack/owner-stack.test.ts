@@ -55,17 +55,10 @@ describe('app-dir - owner-stack', () => {
     await assertHasRedbox(browser)
 
     const stackFramesContent = await getStackFramesContent(browser)
-    if (process.env.TURBOPACK) {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
-        "at useErrorHook (app/browser/uncaught/page.js (10:3))
-        at Page (app/browser/uncaught/page.js (14:3))"
+    expect(stackFramesContent).toMatchInlineSnapshot(`
+       "at useErrorHook (app/browser/uncaught/page.js (10:3))
+       at Page (app/browser/uncaught/page.js (14:3))"
       `)
-    } else {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
-        "at useThrowError (app/browser/uncaught/page.js (10:3))
-        at useErrorHook (app/browser/uncaught/page.js (14:3))"
-      `)
-    }
 
     const logs = await browser.log()
     const errorLog = logs.find((log) => {
@@ -126,22 +119,12 @@ describe('app-dir - owner-stack', () => {
     await openRedbox(browser)
 
     const stackFramesContent = await getStackFramesContent(browser)
-
-    if (process.env.TURBOPACK) {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
-        "at useErrorHook (app/browser/caught/page.js (39:3))
-        at Thrower (app/browser/caught/page.js (29:3))
-        at Inner (app/browser/caught/page.js (23:7))
-        at Page (app/browser/caught/page.js (43:10))"
+    expect(stackFramesContent).toMatchInlineSnapshot(`
+       "at useErrorHook (app/browser/caught/page.js (39:3))
+       at Thrower (app/browser/caught/page.js (29:3))
+       at Inner (app/browser/caught/page.js (23:8))
+       at Page (app/browser/caught/page.js (43:11))"
       `)
-    } else {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
-        "at useThrowError (app/browser/caught/page.js (39:3))
-        at useErrorHook (app/browser/caught/page.js (29:3))
-        at Thrower (app/browser/caught/page.js (23:8))
-        at Inner (app/browser/caught/page.js (43:11))"
-      `)
-    }
 
     expect(normalizeStackTrace(errorLog)).toMatchInlineSnapshot(`
       "%o
@@ -169,17 +152,10 @@ describe('app-dir - owner-stack', () => {
     await assertHasRedbox(browser)
 
     const stackFramesContent = await getStackFramesContent(browser)
-    if (process.env.TURBOPACK) {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
+    expect(stackFramesContent).toMatchInlineSnapshot(`
         "at useErrorHook (app/ssr/page.js (8:3))
         at Page (app/ssr/page.js (12:3))"
       `)
-    } else {
-      expect(stackFramesContent).toMatchInlineSnapshot(`
-        "at useThrowError (app/ssr/page.js (8:3))
-        at useErrorHook (app/ssr/page.js (12:3))"
-      `)
-    }
 
     const logs = await browser.log()
     const errorLog = logs.find((log) => {
