@@ -39,7 +39,7 @@ use turbopack_core::{
 
 use crate::{
     client_references::{map_client_references, ClientReferenceMapType, ClientReferencesSet},
-    dynamic_imports::{map_next_dynamic, DynamicImports},
+    dynamic_imports::{map_next_dynamic_operation, DynamicImports},
     project::Project,
     server_actions::{map_server_actions, to_rsc_context, AllActions, AllModuleActions},
 };
@@ -631,13 +631,13 @@ impl NextDynamicGraph {
     pub async fn new_with_entries(
         graph: ResolvedVc<SingleModuleGraph>,
         is_single_page: bool,
-        client_asset_context: Vc<Box<dyn AssetContext>>,
+        client_asset_context: ResolvedVc<Box<dyn AssetContext>>,
     ) -> Result<Vc<Self>> {
-        let mapped = map_next_dynamic(*graph, client_asset_context);
-        mapped.strongly_consistent().await?;
+        let mapped_op = map_next_dynamic_operation(graph, client_asset_context);
+        let mapped_vc = mapped_op.connect().resolve_strongly_consistent().await?;
         // TODO this can be removed once next/dynamic collection is moved to the transition instead
         // of AST traversal
-        let _ = mapped.take_collectibles::<Box<dyn Issue>>();
+        let _ = mapped_op.take_collectibles::<Box<dyn Issue>>();
 
         // TODO shrink graph here, using the information from
         //  - `mapped` (which lists the relevant nodes)
@@ -666,7 +666,7 @@ impl NextDynamicGraph {
         Ok(NextDynamicGraph {
             is_single_page,
             graph,
-            data: mapped.to_resolved().await?,
+            data: mapped_vc.to_resolved().await?,
         }
         .cell())
     }
@@ -1046,12 +1046,12 @@ impl ReducedGraphs {
     }
 }
 
-#[turbo_tasks::function]
-async fn get_reduced_graphs_for_endpoint_inner(
-    project: Vc<Project>,
+#[turbo_tasks::function(operation)]
+async fn get_reduced_graphs_for_endpoint_inner_operation(
+    project: ResolvedVc<Project>,
     entry: ResolvedVc<Box<dyn Module>>,
     // TODO should this happen globally or per endpoint? Do they all have the same context?
-    client_asset_context: Vc<Box<dyn AssetContext>>,
+    client_asset_context: ResolvedVc<Box<dyn AssetContext>>,
 ) -> Result<Vc<ReducedGraphs>> {
     let (is_single_page, graphs) = match &*project.next_mode().await? {
         NextMode::Development => (
@@ -1079,7 +1079,7 @@ async fn get_reduced_graphs_for_endpoint_inner(
         graphs
             .iter()
             .map(|graph| {
-                NextDynamicGraph::new_with_entries(**graph, is_single_page, client_asset_context)
+                NextDynamicGraph::new_with_entries(**graph, is_single_page, *client_asset_context)
                     .to_resolved()
             })
             .try_join()
@@ -1125,17 +1125,19 @@ async fn get_reduced_graphs_for_endpoint_inner(
 /// references, etc).
 #[turbo_tasks::function]
 pub async fn get_reduced_graphs_for_endpoint(
-    project: Vc<Project>,
-    entry: Vc<Box<dyn Module>>,
+    project: ResolvedVc<Project>,
+    entry: ResolvedVc<Box<dyn Module>>,
     // TODO should this happen globally or per endpoint? Do they all have the same context?
-    client_asset_context: Vc<Box<dyn AssetContext>>,
+    client_asset_context: ResolvedVc<Box<dyn AssetContext>>,
 ) -> Result<Vc<ReducedGraphs>> {
     // TODO get rid of this function once everything inside of
-    // `get_reduced_graphs_for_endpoint_inner` calls `take_collectibles()` when needed
-    let result = get_reduced_graphs_for_endpoint_inner(project, entry, client_asset_context);
+    // `get_reduced_graphs_for_endpoint_inner_operation` calls `take_collectibles()` when needed
+    let result_op =
+        get_reduced_graphs_for_endpoint_inner_operation(project, entry, client_asset_context);
+    let result_vc = result_op.connect();
     if project.next_mode().await?.is_production() {
-        result.strongly_consistent().await?;
-        let _issues = result.take_collectibles::<Box<dyn Issue>>();
+        result_vc.strongly_consistent().await?;
+        let _issues = result_op.take_collectibles::<Box<dyn Issue>>();
     }
-    Ok(result)
+    Ok(result_vc)
 }

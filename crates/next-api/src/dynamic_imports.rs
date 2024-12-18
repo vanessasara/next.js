@@ -274,10 +274,10 @@ pub struct DynamicImportedChunks(
 #[turbo_tasks::value(transparent)]
 pub struct DynamicImports(pub FxIndexMap<ResolvedVc<Box<dyn Module>>, DynamicImportedModules>);
 
-#[turbo_tasks::function]
-pub async fn map_next_dynamic(
-    graph: Vc<SingleModuleGraph>,
-    client_asset_context: Vc<Box<dyn AssetContext>>,
+#[turbo_tasks::function(operation)]
+pub async fn map_next_dynamic_operation(
+    graph: ResolvedVc<SingleModuleGraph>,
+    client_asset_context: ResolvedVc<Box<dyn AssetContext>>,
 ) -> Result<Vc<DynamicImports>> {
     let data = graph
         .await?
@@ -292,7 +292,7 @@ pub async fn map_next_dynamic(
                 if !is_browser {
                     // Only collect in RSC and SSR
                     if let Some(v) =
-                        &*build_dynamic_imports_map_for_module(client_asset_context, *node.module)
+                        &*build_dynamic_imports_map_for_module(*client_asset_context, *node.module)
                             .await?
                     {
                         return Ok(Some(v.await?.clone_value()));
